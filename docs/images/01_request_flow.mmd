@@ -1,0 +1,29 @@
+sequenceDiagram
+    participant U as User (Browser)
+    participant API as FastAPI /api/chat
+    participant MG as Meta-Agent Graph
+    participant SG as Safety Gate
+    participant CL as Classifier
+    participant SA as Sub-Agent
+    participant T  as Mock Tools
+
+    U->>API: POST /api/chat {message, user_type, conversation_id}
+    API->>MG: run_support_agent(message, user_type, conversation_id)
+
+    MG->>SG: safety node (gpt-4o-mini)
+    alt blocked
+        SG-->>MG: safety_passed=false
+        MG-->>API: "I can't help with that."
+    else passed
+        SG-->>MG: safety_passed=true
+        MG->>CL: classify node → intent label
+        CL-->>MG: intent (e.g. "charge_review")
+        MG->>SA: dispatch to matching sub-agent node
+        SA->>T: tool calls (get_trip_info, process_refund…)
+        T-->>SA: tool results
+        SA-->>MG: final_response + tool_calls
+        MG-->>API: {response, intent, agent_name, tool_calls, safety_passed}
+    end
+
+    API-->>U: ChatResponse (JSON)
+    U->>U: Render bubble + meta badges

@@ -1,0 +1,7 @@
+flowchart LR
+    A[Domain Expert\nopens Builder UI] -->|fills form| B["POST /api/agents"]
+    B --> C["Saved to\nconfig/agents/intent.json"]
+    C --> D["loader.py reads JSON\non next request"]
+    D --> E["ConfigurableAgent\n= ReAct agent with prompt + tools"]
+    E --> F["Registered as node\nin meta StateGraph"]
+    F --> G["Live for all\nnew conversations"]

@@ -1,0 +1,26 @@
+flowchart TD
+    START([__start__]) --> safety
+
+    safety -->|blocked| END([__end__])
+    safety -->|passed| classify
+
+    classify -->|rider_intent| rider_intent
+    classify -->|driver_intent| driver_intent
+    classify -->|earnings| earnings
+    classify -->|damage_claim| damage_claim
+    classify -->|charge_review| charge_review
+    classify -->|driver_tax| driver_tax
+    classify -->|rider_general| rider_general
+
+    rider_intent   --> END
+    driver_intent  --> END
+    earnings       --> END
+    damage_claim   --> END
+    charge_review  --> END
+    driver_tax     --> END
+    rider_general  --> END
+
+    style START fill:#FF00BF,color:#fff
+    style END   fill:#1a1a2e,color:#fff
+    style safety fill:#ef4444,color:#fff
+    style classify fill:#3b82f6,color:#fff

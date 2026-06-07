@@ -1,0 +1,9 @@
+flowchart TD
+    M[Incoming message] --> LLM["gpt-4o-mini\nsafety check"]
+    LLM -->|safe| PASS["safety_passed = true\ncontinue to classifier"]
+    LLM -->|unsafe| BLOCK["safety_passed = false\nreturn policy message"]
+    LLM -->|LLM error| FAILOPEN["fail-open\nsafety_passed = true"]
+
+    style BLOCK fill:#ef4444,color:#fff
+    style PASS  fill:#22c55e,color:#fff
+    style FAILOPEN fill:#f59e0b,color:#000

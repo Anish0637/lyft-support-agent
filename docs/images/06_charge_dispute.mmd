@@ -1,0 +1,14 @@
+sequenceDiagram
+    participant R  as Rider
+    participant CL as Classifier
+    participant CR as charge_review agent
+    participant T1 as get_trip_info
+    participant T2 as process_refund
+
+    R->>CL: "I was overcharged on trip_003"
+    CL->>CR: intent=charge_review
+    CR->>T1: get_trip_info("trip_003")
+    T1-->>CR: {amount:35.00, surge:13.00, base_fare:22.00}
+    CR->>T2: process_refund(rider_001, trip_003, 13.00, "surge_overcharge")
+    T2-->>CR: {refund_id:"REF-ABC", status:"approved", processing_days:3}
+    CR-->>R: "I've processed a $13.00 refund for the surge charge..."

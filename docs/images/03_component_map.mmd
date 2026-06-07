@@ -1,0 +1,43 @@
+flowchart LR
+    subgraph Browser
+        CUI[Chat UI\nui/chat/index.html]
+        BUI[Builder UI\nui/builder/index.html]
+    end
+
+    subgraph FastAPI["FastAPI  api/server.py"]
+        CR["/api/chat\nchat.py"]
+        AR["/api/agents\nagents.py"]
+        HR["/health\nhealth.py"]
+    end
+
+    subgraph LangGraph["LangGraph  agent/"]
+        MG[meta_agent.py\nStateGraph]
+        SG[safety.py\ngpt-4o-mini]
+        CA[configurable_agent.py\nReAct agent]
+    end
+
+    subgraph Config["Config  config/"]
+        CL[loader.py]
+        CF[agents/*.json]
+    end
+
+    subgraph Tools["Tools  tools/"]
+        ST[support_tools.py\n10 mock @tool functions]
+    end
+
+    subgraph CI["CI  ci/"]
+        PL[prompt_linter.py]
+    end
+
+    CUI -->|"fetch POST /api/chat"| CR
+    BUI -->|"fetch GET/POST/PUT /api/agents"| AR
+    BUI -->|"fetch POST /api/agents/lint"| AR
+
+    CR --> MG
+    MG --> SG
+    MG --> CA
+    CA --> ST
+
+    AR --> CL
+    CL --> CF
+    AR --> PL
