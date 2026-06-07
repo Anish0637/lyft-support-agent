@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lyft Agent Builder</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    :root {
+      --lyft-pink:   #FF00BF;
+      --sidebar-w:   260px;
+      --dark:        #0f0f1a;
+      --dark2:       #1a1a2e;
+      --dark3:       #252540;
+      --border:      rgba(255,255,255,.08);
+      --text:        #e2e8f0;
+      --text-muted:  #64748b;
+      --green:       #22c55e;
+      --red:         #ef4444;
+      --yellow:      #f59e0b;
+      --blue:        #3b82f6;
+      --radius:      12px;
+    }
+    html, body { height: 100%; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', monospace; background: var(--dark); color: var(--text); }
+    .app { display: flex; height: 100vh; overflow: hidden; }
+
+    /* ── Sidebar ────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: var(--sidebar-w); min-width: var(--sidebar-w);
+      background: var(--dark2); border-right: 1px solid var(--border);
+      display: flex; flex-direction: column;
+    }
+    .sidebar-top { padding: 20px; border-bottom: 1px solid var(--border); }
+    .sb-logo { display: flex; align-items: center; gap: 10px; margin-bottom: 20px; }
+    .sb-logo .logo-box { width: 32px; height: 32px; background: var(--lyft-pink); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .sb-logo .logo-text { font-size: 14px; font-weight: 700; color: #fff; line-height: 1.2; }
+    .sb-logo .logo-text small { font-size: 10px; color: var(--text-muted); font-weight: 400; display: block; }
+    .add-btn {
+      width: 100%; padding: 9px; background: var(--lyft-pink); border: none;
+      border-radius: 8px; color: #fff; font-size: 13px; font-weight: 600;
+      cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+      transition: opacity .2s;
+    }
+    .add-btn:hover { opacity: .88; }
+    .sb-agents { flex: 1; overflow-y: auto; padding: 12px 10px; }
+    .sb-agents h4 { font-size: 10px; text-transform: uppercase; letter-spacing: .1em; color: var(--text-muted); padding: 0 8px 8px; }
+    .agent-card {
+      padding: 10px 12px; border-radius: 8px; cursor: pointer;
+      margin-bottom: 4px; transition: background .15s; border: 1px solid transparent;
+    }
+    .agent-card:hover { background: rgba(255,255,255,.04); }
+    .agent-card.active { background: rgba(255,0,191,.12); border-color: rgba(255,0,191,.3); }
+    .agent-card .ac-name { font-size: 13px; font-weight: 600; color: #fff; }
+    .agent-card .ac-meta { font-size: 11px; color: var(--text-muted); margin-top: 2px; display: flex; gap: 8px; }
+    .user-type-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+    .user-type-dot.rider  { background: var(--blue); }
+    .user-type-dot.driver { background: var(--green); }
+    .sb-footer { padding: 16px 20px; border-top: 1px solid var(--border); }
+    .sb-footer a { font-size: 12px; color: var(--text-muted); text-decoration: none; display: flex; align-items: center; gap: 6px; }
+    .sb-footer a:hover { color: var(--lyft-pink); }
+
+    /* ── Main area ────────────────────────────────────────────────────── */
+    .main { flex: 1; display: flex; flex-direction: column; min-width: 0; overflow: hidden; }
+    .main-header {
+      padding: 16px 28px; border-bottom: 1px solid var(--border);
+      background: var(--dark2); display: flex; align-items: center; justify-content: space-between;
+    }
+    .main-header h1 { font-size: 16px; font-weight: 700; color: #fff; }
+    .main-header p { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+    .header-actions { display: flex; gap: 8px; }
+    .btn { padding: 8px 16px; border-radius: 8px; font-size: 13px; font-weight: 500; cursor: pointer; border: none; transition: all .15s; }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { color: var(--text); border-color: rgba(255,255,255,.2); }
+    .btn-danger { background: rgba(239,68,68,.12); color: var(--red); border: 1px solid rgba(239,68,68,.2); }
+    .btn-danger:hover { background: rgba(239,68,68,.2); }
+    .btn-primary { background: var(--lyft-pink); color: #fff; }
+    .btn-primary:hover { opacity: .88; }
+    .btn-test { background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.25); }
+    .btn-test:hover { background: rgba(59,130,246,.25); }
+
+    /* ── Content panels ───────────────────────────────────────────────── */
+    .content { flex: 1; display: flex; overflow: hidden; }
+    .form-panel { flex: 1; overflow-y: auto; padding: 24px 28px; }
+    .right-panel { width: 340px; min-width: 340px; border-left: 1px solid var(--border); display: flex; flex-direction: column; background: var(--dark2); overflow: hidden; }
+
+    /* ── Empty state ──────────────────────────────────────────────────── */
+    .empty-state { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--text-muted); gap: 12px; text-align: center; }
+    .empty-state .icon { font-size: 48px; }
+    .empty-state h3 { font-size: 16px; color: var(--text); }
+    .empty-state p { font-size: 13px; max-width: 280px; }
+
+    /* ── Form fields ──────────────────────────────────────────────────── */
+    .form-section { margin-bottom: 24px; }
+    .form-section h3 { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--text-muted); margin-bottom: 12px; }
+    .field { margin-bottom: 16px; }
+    label { display: block; font-size: 12px; font-weight: 500; color: var(--text-muted); margin-bottom: 6px; }
+    .required::after { content: ' *'; color: var(--lyft-pink); }
+    input[type=text], select, textarea {
+      width: 100%; padding: 10px 14px; background: var(--dark3);
+      border: 1px solid var(--border); border-radius: 8px;
+      color: var(--text); font-size: 13px; font-family: inherit; outline: none;
+      transition: border-color .2s;
+    }
+    input[type=text]:focus, select:focus, textarea:focus { border-color: rgba(255,0,191,.5); }
+    textarea { resize: vertical; min-height: 280px; line-height: 1.6; font-family: 'SF Mono', 'Fira Code', monospace; font-size: 12.5px; }
+    select option { background: var(--dark3); }
+    .field-row { display: flex; gap: 12px; }
+    .field-row .field { flex: 1; }
+    .hint { font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+
+    /* ── Tools checkboxes ─────────────────────────────────────────────── */
+    .tools-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+    .tool-check { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--dark3); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; }
+    .tool-check:hover { border-color: rgba(255,0,191,.3); }
+    .tool-check.checked { background: rgba(255,0,191,.1); border-color: rgba(255,0,191,.4); }
+    .tool-check input { display: none; }
+    .check-icon { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border); background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+    .tool-check.checked .check-icon { background: var(--lyft-pink); border-color: var(--lyft-pink); }
+    .check-icon svg { display: none; }
+    .tool-check.checked .check-icon svg { display: block; }
+    .tool-name { font-size: 12px; color: var(--text); }
+
+    /* ── Prompt templates ─────────────────────────────────────────────── */
+    .template-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+    .tpl-btn { padding: 4px 10px; font-size: 11px; background: var(--dark3); border: 1px solid var(--border); border-radius: 6px; color: var(--text-muted); cursor: pointer; transition: all .15s; }
+    .tpl-btn:hover { border-color: var(--lyft-pink); color: var(--lyft-pink); }
+
+    /* ── Lint panel ───────────────────────────────────────────────────── */
+    .right-panel-tabs { display: flex; border-bottom: 1px solid var(--border); }
+    .rp-tab { flex: 1; padding: 12px; font-size: 12px; font-weight: 500; text-align: center; cursor: pointer; color: var(--text-muted); border-bottom: 2px solid transparent; transition: all .15s; }
+    .rp-tab.active { color: var(--lyft-pink); border-bottom-color: var(--lyft-pink); }
+    .rp-body { flex: 1; overflow-y: auto; padding: 16px; }
+    .lint-status { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px; font-size: 13px; font-weight: 500; margin-bottom: 12px; }
+    .lint-status.pass  { background: rgba(34,197,94,.1);  color: var(--green); border: 1px solid rgba(34,197,94,.2); }
+    .lint-status.fail  { background: rgba(239,68,68,.1);  color: var(--red);   border: 1px solid rgba(239,68,68,.2); }
+    .lint-status.warn  { background: rgba(245,158,11,.1); color: var(--yellow);border: 1px solid rgba(245,158,11,.2); }
+    .lint-status.idle  { background: var(--dark3); color: var(--text-muted); border: 1px solid var(--border); }
+    .lint-item { padding: 10px 12px; border-radius: 8px; margin-bottom: 8px; font-size: 12px; line-height: 1.5; }
+    .lint-item.error   { background: rgba(239,68,68,.08);  border: 1px solid rgba(239,68,68,.15);  color: #fca5a5; }
+    .lint-item.warning { background: rgba(245,158,11,.08); border: 1px solid rgba(245,158,11,.15); color: #fcd34d; }
+    .lint-item .rule   { font-weight: 700; margin-bottom: 2px; }
+    .lint-msg-area { font-size: 12px; color: var(--text-muted); text-align: center; padding: 20px; }
+
+    /* ── Test panel ───────────────────────────────────────────────────── */
+    .test-input-wrap { padding: 16px; border-top: 1px solid var(--border); }
+    .test-input-wrap textarea { min-height: 64px; font-size: 12px; }
+    .test-run-btn { width: 100%; margin-top: 8px; }
+    .test-result { padding: 0 16px 16px; }
+    .test-result-box { background: var(--dark3); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 12px; line-height: 1.6; max-height: 300px; overflow-y: auto; }
+    .test-tools { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 10px; }
+    .test-tool-tag { padding: 2px 8px; border-radius: 6px; font-size: 11px; background: rgba(59,130,246,.15); color: var(--blue); border: 1px solid rgba(59,130,246,.2); }
+    .response-text { color: var(--text); white-space: pre-wrap; }
+
+    /* ── Confirm dialog ───────────────────────────────────────────────── */
+    .overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.6); z-index: 100; align-items: center; justify-content: center; }
+    .overlay.show { display: flex; }
+    .dialog { background: var(--dark2); border: 1px solid var(--border); border-radius: 14px; padding: 28px; max-width: 360px; width: 90%; }
+    .dialog h3 { font-size: 16px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+    .dialog p  { font-size: 13px; color: var(--text-muted); margin-bottom: 20px; }
+    .dialog-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+    /* ── Toast ────────────────────────────────────────────────────────── */
+    .toast-wrap { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 8px; z-index: 200; }
+    .toast { padding: 12px 18px; border-radius: 10px; font-size: 13px; font-weight: 500; animation: slideIn .25s ease; max-width: 320px; }
+    .toast.success { background: #14532d; color: #86efac; border: 1px solid #166534; }
+    .toast.error   { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+    .toast.info    { background: var(--dark3); color: var(--text); border: 1px solid var(--border); }
+    @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+    ::-webkit-scrollbar { width: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(255,255,255,.1); border-radius: 3px; }
+  </style>
+</head>
+<body>
+<div class="app">
+
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="sb-logo">
+        <div class="logo-box">⚙️</div>
+        <div class="logo-text">Agent Builder <small>Internal Tool</small></div>
+      </div>
+      <button class="add-btn" onclick="showCreate()">
+        <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+        New Agent
+      </button>
+    </div>
+    <div class="sb-agents">
+      <h4>Configurable Agents</h4>
+      <div id="agent-list"></div>
+    </div>
+    <div class="sb-footer">
+      <a href="/" target="_blank">
+        <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2z"/></svg>
+        Customer Chat
+      </a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main">
+    <div class="main-header">
+      <div>
+        <h1 id="form-title">Agent Builder</h1>
+        <p id="form-sub">Select an agent to edit, or create a new one</p>
+      </div>
+      <div class="header-actions" id="header-actions" style="display:none">
+        <button class="btn btn-test" onclick="runTest()">▶ Test</button>
+        <button class="btn btn-ghost" onclick="cancelEdit()">Cancel</button>
+        <button class="btn btn-danger" id="del-btn" onclick="showDelete()">Delete</button>
+        <button class="btn btn-primary" onclick="saveAgent()">Save Agent</button>
+      </div>
+      <div id="create-header-actions" style="display:none">
+        <div class="header-actions">
+          <button class="btn btn-test" onclick="runTest()">▶ Test</button>
+          <button class="btn btn-ghost" onclick="cancelEdit()">Cancel</button>
+          <button class="btn btn-primary" onclick="saveAgent()">Create Agent</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content">
+      <!-- Left: form -->
+      <div class="form-panel" id="form-panel">
+        <div class="empty-state">
+          <div class="icon">🤖</div>
+          <h3>No agent selected</h3>
+          <p>Pick an agent from the sidebar to edit it, or click "New Agent" to create one from scratch.</p>
+        </div>
+      </div>
+
+      <!-- Right: lint + test -->
+      <div class="right-panel">
+        <div class="right-panel-tabs">
+          <div class="rp-tab active" onclick="switchTab('lint', this)">Lint</div>
+          <div class="rp-tab" onclick="switchTab('test', this)">Test</div>
+        </div>
+        <div class="rp-body" id="lint-panel">
+          <div class="lint-msg-area">Save or type a prompt to see lint results.</div>
+        </div>
+        <div class="rp-body" id="test-panel" style="display:none">
+          <div id="test-result" class="test-result"></div>
+        </div>
+        <div class="test-input-wrap" id="test-input-wrap" style="display:none">
+          <textarea id="test-msg" placeholder="Type a test message..." rows="3"></textarea>
+          <button class="btn btn-test test-run-btn" onclick="runTest()">▶ Run Test</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete confirm dialog -->
+<div class="overlay" id="del-overlay">
+  <div class="dialog">
+    <h3>Delete Agent?</h3>
+    <p id="del-msg">This will permanently delete this agent config. This cannot be undone.</p>
+    <div class="dialog-actions">
+      <button class="btn btn-ghost" onclick="closeDialog('del-overlay')">Cancel</button>
+      <button class="btn btn-danger" onclick="deleteAgent()">Delete</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<script>
+const API = '';
+const AVAILABLE_TOOLS = [
+  'get_rider_info','get_trip_info','process_refund',
+  'get_driver_info','get_driver_earnings','submit_damage_claim',
+  'create_support_ticket','escalate_to_human','send_notification','update_account',
+];
+const PROMPT_TEMPLATE = `## Identity
+You are a Lyft [role] support specialist.
+You handle [user_type] inquiries about [topic].
+
+## Scope
+IN-SCOPE: [list what this agent handles]
+OUT-OF-SCOPE: [list what it does NOT handle — include routing action]
+
+## Phased Workflow
+
+Phase 1 — Understand the issue:
+- [step]
+
+Phase 2 — Gather information:
+- If [condition]: call [tool]
+
+Phase 3 — Resolve:
+- [resolution action]: call [tool]
+
+Phase 4 — Confirm:
+- Always summarize what was done in 2-3 sentences
+
+## Content Guidelines
+- DO say: "[example phrase]"
+- DO NOT say: "[bad phrase]"
+- Keep responses under 150 words
+- Sign off as: Lyft [Team] Support Team`;
+
+let agents = [];
+let currentAgent = null;
+let isNew = false;
+let lintTimer = null;
+
+// ── Load ────────────────────────────────────────────────────────────────
+async function loadAgents() {
+  try {
+    const res = await fetch(`${API}/api/agents`);
+    const data = await res.json();
+    agents = data.agents || [];
+    renderAgentList();
+  } catch(e) { showToast('Could not connect to API. Is the server running?', 'error'); }
+}
+
+function renderAgentList() {
+  const list = document.getElementById('agent-list');
+  if (!agents.length) { list.innerHTML = '<p style="font-size:12px;color:#4b5563;padding:0 8px">No agents yet</p>'; return; }
+  list.innerHTML = agents.map(a => `
+    <div class="agent-card ${currentAgent?.intent === a.intent ? 'active' : ''}" onclick="loadAgent('${a.intent}')">
+      <div class="ac-name">${a.intent}</div>
+      <div class="ac-meta">
+        <span class="user-type-dot ${a.user_type}"></span>${a.user_type}
+        · ${a.tools?.length || 0} tools
+      </div>
+    </div>`).join('');
+}
+
+async function loadAgent(intent) {
+  try {
+    const res = await fetch(`${API}/api/agents/${intent}`);
+    const data = await res.json();
+    currentAgent = data;
+    isNew = false;
+    renderForm(data);
+  } catch(e) { showToast('Failed to load agent', 'error'); }
+}
+
+// ── Form ────────────────────────────────────────────────────────────────
+function showCreate() {
+  currentAgent = null;
+  isNew = true;
+  renderForm({ intent: '', user_type: 'rider', description: '', tools: [], prompt: PROMPT_TEMPLATE });
+  document.getElementById('form-title').textContent = 'New Agent';
+  document.getElementById('form-sub').textContent = 'Define your self-serve agent — no code needed';
+  document.getElementById('header-actions').style.display = 'none';
+  document.getElementById('create-header-actions').style.display = 'block';
+  document.getElementById('lint-panel').innerHTML = '<div class="lint-msg-area">Fill in the prompt and click "Test" or wait for lint.</div>';
+  switchLintTabActive();
+}
+
+function cancelEdit() {
+  currentAgent = null;
+  isNew = false;
+  document.getElementById('form-panel').innerHTML = '<div class="empty-state"><div class="icon">🤖</div><h3>No agent selected</h3><p>Pick an agent from the sidebar to edit it, or click "New Agent" to create one.</p></div>';
+  document.getElementById('form-title').textContent = 'Agent Builder';
+  document.getElementById('form-sub').textContent = 'Select an agent to edit, or create a new one';
+  document.getElementById('header-actions').style.display = 'none';
+  document.getElementById('create-header-actions').style.display = 'none';
+  renderAgentList();
+}
+
+function renderForm(data) {
+  const fp = document.getElementById('form-panel');
+  fp.innerHTML = `
+    <div class="form-section">
+      <h3>Identity</h3>
+      <div class="field-row">
+        <div class="field">
+          <label class="required">Intent Slug</label>
+          <input type="text" id="f-intent" value="${escHtml(data.intent || '')}" placeholder="e.g. driver_bonus" ${!isNew ? 'readonly style=opacity:.5' : ''}/>
+          <p class="hint">Lowercase letters, digits, underscores only. Must be unique.</p>
+        </div>
+        <div class="field">
+          <label class="required">User Type</label>
+          <select id="f-type">
+            <option value="rider"  ${data.user_type==='rider'?'selected':''}>🧍 Rider</option>
+            <option value="driver" ${data.user_type==='driver'?'selected':''}>🚗 Driver</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Description</label>
+        <input type="text" id="f-desc" value="${escHtml(data.description || '')}" placeholder="Brief description for the agent list"/>
+      </div>
+    </div>
+
+    <div class="form-section">
+      <h3>Tools</h3>
+      <p class="hint" style="margin-bottom:10px">Select the tools this agent can use. Only assign what's needed.</p>
+      <div class="tools-grid" id="tools-grid">${renderToolsGrid(data.tools || [])}</div>
+    </div>
+
+    <div class="form-section">
+      <h3>Prompt</h3>
+      <div class="template-bar">
+        <span style="font-size:11px;color:#4b5563;align-self:center">Insert section:</span>
+        <button class="tpl-btn" onclick="insertSection('identity')">Identity</button>
+        <button class="tpl-btn" onclick="insertSection('scope')">Scope</button>
+        <button class="tpl-btn" onclick="insertSection('workflow')">Workflow</button>
+        <button class="tpl-btn" onclick="insertSection('guidelines')">Guidelines</button>
+        <button class="tpl-btn" onclick="loadFullTemplate()">Full Template</button>
+      </div>
+      <textarea id="f-prompt" oninput="scheduleLint()" spellcheck="false">${escHtml(data.prompt || '')}</textarea>
+      <p class="hint">Use clear, explicit instructions. Every phase needs an exit condition.</p>
+    </div>`;
+
+  document.getElementById('header-actions').style.display = isNew ? 'none' : 'flex';
+  document.getElementById('create-header-actions').style.display = isNew ? 'block' : 'none';
+  document.getElementById('form-title').textContent = isNew ? 'New Agent' : data.intent;
+  document.getElementById('form-sub').textContent = isNew ? 'Define your self-serve agent' : `${data.user_type} · ${data.description || 'No description'}`;
+  document.getElementById('test-input-wrap').style.display = 'flex';
+  document.getElementById('test-input-wrap').style.flexDirection = 'column';
+  renderAgentList();
+  scheduleLint();
+}
+
+function renderToolsGrid(selected) {
+  return AVAILABLE_TOOLS.map(name => {
+    const checked = selected.includes(name);
+    return `<label class="tool-check ${checked?'checked':''}" onclick="toggleTool(this, '${name}')">
+      <input type="checkbox" ${checked?'checked':''} />
+      <div class="check-icon"><svg width="10" height="10" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
+      <span class="tool-name">${name}</span>
+    </label>`;
+  }).join('');
+}
+
+function toggleTool(el, name) {
+  el.classList.toggle('checked');
+}
+
+function getSelectedTools() {
+  return [...document.querySelectorAll('.tool-check.checked')].map(el => el.querySelector('.tool-name').textContent.trim());
+}
+
+// ── Prompt templates ──────────────────────────────────────────────────────
+const SECTIONS = {
+  identity: `\n## Identity\nYou are a Lyft [role] support specialist.\nYou handle [user_type] inquiries about [topic].\n`,
+  scope: `\n## Scope\nIN-SCOPE: [list what this agent handles]\nOUT-OF-SCOPE: [list what it does NOT handle]\n`,
+  workflow: `\n## Phased Workflow\n\nPhase 1 — Understand the issue:\n- [step]\n\nPhase 2 — Gather information:\n- If [condition]: call [tool]\n\nPhase 3 — Resolve:\n- [action]: call [tool]\n\nPhase 4 — Confirm:\n- Summarize in 2-3 sentences\n`,
+  guidelines: `\n## Content Guidelines\n- DO say: "[example]"\n- DO NOT say: "[bad example]"\n- Keep responses under 150 words\n- Sign off as: Lyft Support Team\n`,
+};
+
+function insertSection(key) {
+  const ta = document.getElementById('f-prompt');
+  if (!ta) return;
+  const start = ta.selectionStart;
+  const val = ta.value;
+  ta.value = val.slice(0, start) + SECTIONS[key] + val.slice(start);
+  scheduleLint();
+}
+
+function loadFullTemplate() {
+  const ta = document.getElementById('f-prompt');
+  if (!ta) return;
+  ta.value = PROMPT_TEMPLATE;
+  scheduleLint();
+}
+
+// ── Lint ────────────────────────────────────────────────────────────────
+function scheduleLint() {
+  clearTimeout(lintTimer);
+  lintTimer = setTimeout(runLint, 600);
+}
+
+async function runLint() {
+  const prompt = document.getElementById('f-prompt')?.value || '';
+  const intent = document.getElementById('f-intent')?.value || 'preview';
+  const userType = document.getElementById('f-type')?.value || 'rider';
+  const tools = getSelectedTools();
+
+  const panel = document.getElementById('lint-panel');
+  panel.innerHTML = '<div class="lint-msg-area">Checking…</div>';
+
+  try {
+    const res = await fetch(`${API}/api/agents/lint`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ prompt, config: { intent, user_type: userType, tools } }),
+    });
+    const data = await res.json();
+
+    let html = '';
+    const totalErrors = data.errors?.length || 0;
+    const totalWarns = data.warnings?.length || 0;
+
+    if (totalErrors === 0 && totalWarns === 0) {
+      html = `<div class="lint-status pass">✓ All checks passed — good to save</div>`;
+    } else if (totalErrors > 0) {
+      html = `<div class="lint-status fail">✗ ${totalErrors} error${totalErrors>1?'s':''} — fix before saving</div>`;
+    } else {
+      html = `<div class="lint-status warn">⚠ ${totalWarns} warning${totalWarns>1?'s':''}</div>`;
+    }
+
+    (data.errors || []).forEach(e => {
+      html += `<div class="lint-item error"><div class="rule">[${e.rule}]</div>${escHtml(e.message)}</div>`;
+    });
+    (data.warnings || []).forEach(w => {
+      html += `<div class="lint-item warning"><div class="rule">[${w.rule}]</div>${escHtml(w.message)}</div>`;
+    });
+
+    if (totalErrors + totalWarns === 0) html += `<div class="lint-msg-area" style="color:#4ade80">No issues found. Prompt looks good!</div>`;
+    panel.innerHTML = html;
+  } catch(e) {
+    panel.innerHTML = '<div class="lint-msg-area">Lint check failed — is the server running?</div>';
+  }
+}
+
+// ── Save ────────────────────────────────────────────────────────────────
+async function saveAgent() {
+  const intent  = document.getElementById('f-intent')?.value.trim();
+  const type    = document.getElementById('f-type')?.value;
+  const desc    = document.getElementById('f-desc')?.value.trim();
+  const prompt  = document.getElementById('f-prompt')?.value;
+  const tools   = getSelectedTools();
+
+  if (!intent || !prompt) { showToast('Intent slug and prompt are required', 'error'); return; }
+
+  const body = { intent, user_type: type, description: desc, prompt, tools };
+  const url  = isNew ? `${API}/api/agents` : `${API}/api/agents/${currentAgent.intent}`;
+  const method = isNew ? 'POST' : 'PUT';
+
+  try {
+    const res = await fetch(url, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    const data = await res.json();
+
+    if (!res.ok) {
+      const errDetail = data.detail?.errors?.map(e => e.message).join('; ') || data.detail || 'Unknown error';
+      showToast(`Failed: ${errDetail}`, 'error');
+      return;
+    }
+
+    showToast(isNew ? `Agent "${intent}" created!` : `Agent "${intent}" updated!`, 'success');
+    currentAgent = body;
+    isNew = false;
+    await loadAgents();
+    renderAgentList();
+    document.getElementById('header-actions').style.display = 'flex';
+    document.getElementById('create-header-actions').style.display = 'none';
+  } catch(e) { showToast('Save failed — check server', 'error'); }
+}
+
+// ── Delete ───────────────────────────────────────────────────────────────
+function showDelete() {
+  document.getElementById('del-msg').textContent = `Delete agent "${currentAgent?.intent}"? This cannot be undone.`;
+  document.getElementById('del-overlay').classList.add('show');
+}
+
+async function deleteAgent() {
+  closeDialog('del-overlay');
+  try {
+    const res = await fetch(`${API}/api/agents/${currentAgent.intent}`, { method: 'DELETE' });
+    if (res.ok) {
+      showToast(`Agent "${currentAgent.intent}" deleted`, 'info');
+      cancelEdit();
+      await loadAgents();
+    } else { showToast('Delete failed', 'error'); }
+  } catch(e) { showToast('Delete failed', 'error'); }
+}
+
+function closeDialog(id) { document.getElementById(id).classList.remove('show'); }
+
+// ── Test ─────────────────────────────────────────────────────────────────
+function switchTab(tab, el) {
+  document.querySelectorAll('.rp-tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('lint-panel').style.display  = tab === 'lint' ? 'block' : 'none';
+  document.getElementById('test-panel').style.display  = tab === 'test' ? 'block' : 'none';
+  document.getElementById('test-input-wrap').style.display = 'flex';
+  document.getElementById('test-input-wrap').style.flexDirection = 'column';
+}
+
+function switchLintTabActive() {
+  document.querySelectorAll('.rp-tab').forEach((t, i) => t.classList.toggle('active', i === 0));
+  document.getElementById('lint-panel').style.display = 'block';
+  document.getElementById('test-panel').style.display = 'none';
+}
+
+async function runTest() {
+  const msg = document.getElementById('test-msg')?.value?.trim();
+  if (!msg) { showToast('Enter a test message first', 'info'); return; }
+
+  const intent  = document.getElementById('f-intent')?.value.trim();
+  const type    = document.getElementById('f-type')?.value;
+  const desc    = document.getElementById('f-desc')?.value.trim();
+  const prompt  = document.getElementById('f-prompt')?.value;
+  const tools   = getSelectedTools();
+
+  if (!intent || !prompt) { showToast('Fill in intent and prompt first', 'error'); return; }
+
+  // Switch to test tab
+  document.querySelectorAll('.rp-tab').forEach((t, i) => t.classList.toggle('active', i === 1));
+  document.getElementById('lint-panel').style.display = 'none';
+  document.getElementById('test-panel').style.display = 'block';
+
+  const result = document.getElementById('test-result');
+  result.innerHTML = `<div class="test-result-box"><span style="color:#4b5563">Running test…</span></div>`;
+
+  try {
+    const res = await fetch(`${API}/api/agents/test`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: msg, config: { intent, user_type: type, description: desc, prompt, tools } }),
+    });
+    const data = await res.json();
+
+    if (data.error) {
+      result.innerHTML = `<div class="test-result-box" style="color:#fca5a5">${escHtml(data.error)}</div>`;
+      return;
+    }
+
+    const toolTags = (data.tool_calls || []).map(t => `<span class="test-tool-tag">🔧 ${escHtml(t.name)}</span>`).join('');
+    result.innerHTML = `
+      <div class="test-tools">${toolTags || '<span style="font-size:11px;color:#4b5563">No tools called</span>'}</div>
+      <div class="test-result-box"><span class="response-text">${escHtml(data.final_response || 'No response')}</span></div>`;
+  } catch(e) {
+    result.innerHTML = `<div class="test-result-box" style="color:#fca5a5">Test failed: ${escHtml(String(e))}</div>`;
+  }
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────
+function escHtml(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function showToast(msg, type = 'info') {
+  const wrap = document.getElementById('toast-wrap');
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(() => el.remove(), 3500);
+}
+
+loadAgents();
+</script>
+</body>
+</html>
