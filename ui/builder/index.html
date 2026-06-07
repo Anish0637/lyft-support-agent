@@ -113,7 +113,6 @@
     .tool-check { display: flex; align-items: center; gap: 8px; padding: 8px 12px; background: var(--dark3); border: 1px solid var(--border); border-radius: 8px; cursor: pointer; transition: all .15s; }
     .tool-check:hover { border-color: rgba(255,0,191,.3); }
     .tool-check.checked { background: rgba(255,0,191,.1); border-color: rgba(255,0,191,.4); }
-    .tool-check input { display: none; }
     .check-icon { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border); background: transparent; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
     .tool-check.checked .check-icon { background: var(--lyft-pink); border-color: var(--lyft-pink); }
     .check-icon svg { display: none; }
@@ -422,15 +421,14 @@ function renderForm(data) {
 function renderToolsGrid(selected) {
   return AVAILABLE_TOOLS.map(name => {
     const checked = selected.includes(name);
-    return `<label class="tool-check ${checked?'checked':''}" onclick="toggleTool(this, '${name}')">
-      <input type="checkbox" ${checked?'checked':''} />
+    return `<div class="tool-check ${checked?'checked':''}" onclick="toggleTool(this)">
       <div class="check-icon"><svg width="10" height="10" fill="none" stroke="white" stroke-width="3" viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></div>
       <span class="tool-name">${name}</span>
-    </label>`;
+    </div>`;
   }).join('');
 }
 
-function toggleTool(el, name) {
+function toggleTool(el) {
   el.classList.toggle('checked');
 }
 
